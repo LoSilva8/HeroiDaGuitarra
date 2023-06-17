@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import pygame.mixer
 
 # Inicialização do Pygame
 pygame.init()
@@ -10,6 +11,12 @@ largura = 800
 altura = 600
 tela = pygame.display.set_mode((largura, altura))
 pygame.display.set_caption("Herói da Guitarra")
+
+musicas = {
+    "Fácil": "musicas/stay.mp3",
+    "Médio": "musicas/riders.mp3",
+    "Difícil": "musicas/walk.mp3"
+}
 
 # Cores
 branco = (255, 255, 255)
@@ -25,11 +32,14 @@ raio_botao = 30
 notas = []
 pontos = 0
 vidas = 3
+high_score = 0
+combo = 0
+combo_multiplier = 1
 
 dificuldades = {
     "Fácil": 0.5,
     "Médio": 0.8,
-    "Difícil": 1
+    "Difícil": 1.2
 }
 
 jogo_iniciado = False
@@ -75,11 +85,39 @@ def desenhar_menu_dificuldade():
     pos_texto_dificil = texto_dificil.get_rect(center=(largura // 2, altura // 2 + 100))
     tela.blit(texto_dificil, pos_texto_dificil)
 
+    fonte_high_score = pygame.font.Font(None, 24)
+    texto_high_score = fonte_high_score.render("High Score: " + str(high_score), True, branco)
+    pos_texto_high_score = texto_high_score.get_rect(center=(largura // 2, altura - 50))
+    tela.blit(texto_high_score, pos_texto_high_score)
+
+def desenhar_tela_game_over():
+    tela.fill(preto)
+    desenhar_titulo()
+
+    fonte = pygame.font.Font(None, 36)
+    texto_game_over = fonte.render("Game Over", True, branco)
+    pos_texto_game_over = texto_game_over.get_rect(center=(largura // 2, altura // 2))
+    tela.blit(texto_game_over, pos_texto_game_over)
+
+    fonte_pontuacao = pygame.font.Font(None, 24)
+    texto_pontuacao = fonte_pontuacao.render("Pontuação: " + str(pontos), True, branco)
+    pos_texto_pontuacao = texto_pontuacao.get_rect(center=(largura // 2, altura // 2 + 50))
+    tela.blit(texto_pontuacao, pos_texto_pontuacao)
+
+    texto_high_score = fonte_pontuacao.render("High Score: " + str(high_score), True, branco)
+    pos_texto_high_score = texto_high_score.get_rect(center=(largura // 2, altura // 2 + 100))
+    tela.blit(texto_high_score, pos_texto_high_score)
+
+
 def desenhar_contador_vidas():
     fonte_vidas = pygame.font.Font(None, 24)
     texto_vidas = fonte_vidas.render("Vidas: " + str(vidas), True, branco)
     pos_texto_vidas = texto_vidas.get_rect(topright=(largura - 10, 10))
     tela.blit(texto_vidas, pos_texto_vidas)
+
+    texto_high_score = fonte_vidas.render("High Score: " + str(high_score), True, branco)
+    pos_texto_high_score = texto_high_score.get_rect(midtop=(largura // 2, 10))
+    tela.blit(texto_high_score, pos_texto_high_score)
 
 def iniciar_jogo(nivel):
     global jogo_iniciado, menu_ativo, nivel_dificuldade, pontos, notas,vidas
@@ -90,6 +128,9 @@ def iniciar_jogo(nivel):
     pontos = 0
     notas = []
     vidas = 3
+
+    pygame.mixer.music.load(musicas[nivel])
+    pygame.mixer.music.play()
 
 
 
@@ -146,46 +187,81 @@ while True:
                         if nota.cor == azul and abs(nota.posicao_y - (altura - 50)) <= raio_botao:
                             notas.remove(nota)
                             pontos += 1
+                            combo += 1
+                            if combo % 5 == 0:
+                                combo_multiplier += 1
+                                pontos *= combo_multiplier
                             break
                     else:
                         vidas -= 1
+                        combo = 0
+                        combo_multiplier = 1
                 elif evento.key == pygame.K_w:
                     for nota in notas:
                         if nota.cor == vermelho and abs(nota.posicao_y - (altura - 50)) <= raio_botao:
                             notas.remove(nota)
                             pontos += 1
+                            combo += 1
+                            if combo % 5 == 0:
+                                combo_multiplier += 1
+                                pontos *= combo_multiplier
                             break
                     else:
                         vidas -= 1
+                        combo = 0
+                        combo_multiplier = 1
                 elif evento.key == pygame.K_e:
                     for nota in notas:
                         if nota.cor == verde and abs(nota.posicao_y - (altura - 50)) <= raio_botao:
                             notas.remove(nota)
                             pontos += 1
+                            combo += 1
+                            if combo % 5 == 0:
+                                combo_multiplier += 1
+                                pontos *= combo_multiplier
                             break
                     else:
                         vidas -= 1
+                        combo = 0
+                        combo_multiplier = 1
                 elif evento.key == pygame.K_r:
                     for nota in notas:
                         if nota.cor == amarelo and abs(nota.posicao_y - (altura - 50)) <= raio_botao:
                             notas.remove(nota)
                             pontos += 1
+                            combo += 1
+                            if combo % 5 == 0:
+                                combo_multiplier += 1
+                                pontos *= combo_multiplier
                             break
                     else:
                         vidas -= 1
+                        combo = 0
+                        combo_multiplier = 1
 
-        if vidas <= 0:
-            jogo_iniciado = False
-            menu_ativo = True
-            vidas = 3
-            pontos = 0
-            notas = []
+    if vidas <= 0:
+        if pontos > high_score:
+            high_score = pontos
+        desenhar_tela_game_over()
+        pygame.display.flip()
+        pygame.time.wait(3000)  # Espera 3 segundos antes de voltar ao menu principal
+        jogo_iniciado = False
+        menu_ativo = True
+        vidas = 3
+        pontos = 0
+        notas = []
+        pygame.mixer.music.stop()
 
     notas_copy = notas.copy()
+
+    if len(notas) > 0 and notas[0].posicao_y >= altura - raio_botao:
+        combo = 0
+
     for nota in notas_copy:
         if nota.posicao_y >= altura - raio_botao:
             notas.remove(nota)
             vidas -= 1
+            combo = 0
 
     for nota in notas:
         nota.atualizar()
@@ -201,7 +277,7 @@ while True:
         desenhar_linhas_botoes()
         desenhar_contador_vidas()
 
-        if random.random() < 0.0006:
+        if random.random() < 0.0007:
             criar_nota()
 
         for nota in notas:
@@ -211,5 +287,10 @@ while True:
         fonte_pontos = pygame.font.Font(None, 24)
         texto_pontos = fonte_pontos.render("Pontos: " + str(pontos), True, branco)
         tela.blit(texto_pontos, (10, 10))
+
+        fonte_combo = pygame.font.Font(None, 24)
+        texto_combo = fonte_combo.render("Combo: " + str(combo), True, branco)
+        pos_texto_combo = texto_combo.get_rect(midtop=(largura // 2, 40))
+        tela.blit(texto_combo, pos_texto_combo)
 
     pygame.display.flip()
